@@ -1,8 +1,8 @@
 require 'rake/clean'
 
-BUILD_CONFIG_FILE = File.expand_path 'tmp/mruby_build_config.rb'
-MRUBY_VERSION     = ENV.fetch 'MRUBY_VERSION', '1.2.0'
-MRUBY_ROOT        = File.join 'tmp', "mruby-#{MRUBY_VERSION}"
+BUILD_CONFIG_FILE = File.join ENV['HOME'], 'tmp/mruby_build_config.rb'
+MRUBY_VERSION     = ENV.fetch 'MRUBY_VERSION', '3.0.0'
+MRUBY_ROOT        = File.join ENV['HOME'], 'tmp', "mruby-#{MRUBY_VERSION}"
 MRUBY_EXE         = "#{MRUBY_ROOT}/bin/mruby"
 
 CLOBBER << 'tmp'
@@ -10,7 +10,7 @@ CLOBBER << 'tmp'
 task default: :test
 
 def mruby_rake *tasks
-  raise 'BUILD_CONFIG_FILE unset, add tmp/mruby_build_config.rb dependency' if
+  raise 'BUILD_CONFIG_FILE unset, add $HOME/mruby_build_config.rb dependency' if
     BUILD_CONFIG_FILE.empty?
 
   cd MRUBY_ROOT do
@@ -18,9 +18,9 @@ def mruby_rake *tasks
       'MRUBY_CONFIG' => BUILD_CONFIG_FILE,
     }
 
-    $stderr.puts "minirake #{tasks.join ' '}" if Rake.application.options.trace
+    $stderr.puts "rake #{tasks.join ' '}" if Rake.application.options.trace
 
-    pid = Process.spawn env, 'ruby', 'minirake', *tasks
+    pid = Process.spawn env, 'rake', *tasks
 
     Process.wait pid
 
@@ -42,9 +42,9 @@ end
 desc 'Build mruby'
 task mruby: MRUBY_EXE
 
-directory 'tmp'
+directory File.join(ENV['HOME'], 'tmp')
 
-file BUILD_CONFIG_FILE => 'tmp' do |t|
+file BUILD_CONFIG_FILE => File.join(ENV['HOME'], 'tmp') do |t|
   local_gem = File.expand_path File.dirname __FILE__
 
   build_config = <<-BUILD_CONFIG
@@ -62,16 +62,16 @@ end
 end
 
 mruby_file     = "mruby-#{MRUBY_VERSION}.tar.gz"
-mruby_download = "tmp/#{mruby_file}"
+mruby_download = File.join ENV['HOME'], "tmp/#{mruby_file}"
 
-file mruby_download => "tmp" do
+file mruby_download => File.join(ENV['HOME'], 'tmp') do
   sh 'curl', '-s', '-L', '-o', mruby_download,
      '--fail', '--retry', '3', '--retry-delay', '1',
      "https://github.com/mruby/mruby/archive/#{MRUBY_VERSION}.tar.gz"
 end
 
 directory MRUBY_ROOT => mruby_download do
-  sh 'tar', 'xzf', mruby_download, '-C', 'tmp'
+  sh 'tar', 'xzf', mruby_download, '-C', File.join(ENV['HOME'], 'tmp')
 end
 
 task :update_gems do
@@ -89,4 +89,3 @@ mruby_deps = Rake::FileList[
 file MRUBY_EXE => [:update_gems, *mruby_deps] do
   mruby_rake 'all'
 end
-

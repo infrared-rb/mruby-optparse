@@ -314,7 +314,7 @@
 #               "  (make backup if EXTENSION supplied)") do |ext|
 #         options.inplace = true
 #         options.extension = ext || ''
-#         options.extension.sub!(/\A\.?(?=.)/, ".")  # Ensure extension begins with dot.
+#         options.extension.sub!(/^\.?(?=.)/, ".")  # Ensure extension begins with dot.
 #       end
 #     end
 #
@@ -405,7 +405,7 @@ class OptionParser
   module Completion
     def self.regexp(key, icase)
       icase = nil if icase == false
-      Regexp.new('\A' + Regexp.quote(key).gsub(/(\w+\b)/, '\1\w*'), icase)
+      Regexp.new('^' + Regexp.quote(key).gsub(/(\w+\b)/, '\1\w*'), icase)
     end
 
     def self.candidate(key, icase = false, pat = nil, &block)
@@ -496,9 +496,9 @@ class OptionParser
       case arg
       when ""
         t = self
-      when /\A=?\[/
+      when /^=?\[/
         t = Switch::OptionalArgument
-      when /\A\s+\[/
+      when /^\s+\[/
         t = Switch::PlacedArgument
       else
         t = Switch::RequiredArgument
@@ -602,7 +602,7 @@ class OptionParser
       end
 
       if arg
-        left[0] << (left[1] ? arg.sub(/\A(\[?)=/, '\1') + ',' : arg)
+        left[0] << (left[1] ? arg.sub(/^(\[?)=/, '\1') + ',' : arg)
       end
       mlen = left.collect {|ss| ss.length}.max.to_i
       while mlen > width and l = left.shift
@@ -638,7 +638,7 @@ class OptionParser
     # Main name of the switch.
     #
     def switch_name
-      (long.first || short.first).sub(/\A-+(?:\[no-\])?/, '')
+      (long.first || short.first).sub(/^-+(\[no-\])?/, '')
     end
 
     def compsys(sdone, ldone)   # :nodoc:
@@ -726,7 +726,7 @@ class OptionParser
       # Returns nil if argument is not present or begins with '-'.
       #
       def parse(arg, argv, &error)
-        if !(val = arg) and (argv.empty? or /\A-/ =~ (val = argv[0]))
+        if !(val = arg) and (argv.empty? or /^-/ =~ (val = argv[0]))
           return nil, block, nil
         end
         opt = (val = parse_arg(val, &error))[1]
@@ -1437,15 +1437,15 @@ _arguments -s -S \
         end
         ldesc << "--#{q}"
         long << (o = q.downcase)
-      when /^-(\[\^?\]?(?:[^\\\]]|\\.)*\])(.+)?/
-        q, a = $1, $2
-        o = notwice(Object, klass, 'type')
-        if a
-          default_style = default_style.guess(arg = a)
-          default_pattern, conv = search(:atype, o) unless default_pattern
-        end
-        sdesc << "-#{q}"
-        short << Regexp.new(q)
+      # when /^-(\[\^?\]?(?:[^\\\]]|\\.)*\])(.+)?/
+      #   q, a = $1, $2
+      #   o = notwice(Object, klass, 'type')
+      #   if a
+      #     default_style = default_style.guess(arg = a)
+      #     default_pattern, conv = search(:atype, o) unless default_pattern
+      #   end
+      #   sdesc << "-#{q}"
+      #   short << Regexp.new(q)
       when /^-(.)(.+)?/
         q, a = $1, $2
         if a
@@ -1558,8 +1558,8 @@ _arguments -s -S \
       while arg = argv.shift
         case arg
         # long option
-        when /\A--([^=]*)(?:=(.*))?/m
-          opt, rest = $1, $2
+        when /^--([^=]*)(=(.*))?/m
+          opt, rest = $1, $3
           begin
             sw, = complete(:long, opt, true)
           rescue ParseError => e
@@ -1574,7 +1574,7 @@ _arguments -s -S \
           end
 
         # short option
-        when /\A-(.)((=).*|.+)?/m
+        when /^-(.)((=).*|.+)?/m
           opt, has_arg, eq, val, rest = $1, $3, $3, $2, $2
           begin
             sw, = search(:short, opt)
@@ -1582,7 +1582,7 @@ _arguments -s -S \
               begin
                 sw, = complete(:short, opt)
                 # short option matched.
-                val = arg.sub(/\A-/, '')
+                val = arg.sub(/^-/, '')
                 has_arg = true
               rescue InvalidOption
                 # if no short options match, try completion with long
@@ -1597,7 +1597,7 @@ _arguments -s -S \
           begin
             opt, cb, val = sw.parse(val, argv) {|*exc| raise(*exc) if eq}
             raise InvalidOption, arg if has_arg and !eq and arg == "-#{opt}"
-            argv.unshift(opt) if opt and (!rest or (opt = opt.sub(/\A-*/, '-')) != '-')
+            argv.unshift(opt) if opt and (!rest or (opt = opt.sub(/^-*/, '-')) != '-')
             val = cb.call(val) if cb
             setter.call(sw.switch_name, val) if setter
           rescue ParseError => e
@@ -1763,13 +1763,13 @@ _arguments -s -S \
   def candidate(word)
     list = []
     case word
-    when /\A--/
+    when /^--/
       word, arg = word.split(/=/, 2)
       argpat = Completion.regexp(arg, false) if arg and !arg.empty?
       long = true
-    when /\A-(!-)/
+    when /^-(!-)/
       short = true
-    when /\A-/
+    when /^-/
       long = short = true
     end
     pat = Completion.regexp(word, true)
@@ -1777,7 +1777,7 @@ _arguments -s -S \
       next unless Switch === opt
       opts = (long ? opt.long : []) + (short ? opt.short : [])
       opts = Completion.candidate(word, true, pat, &opts.method(:each)).map(&:first) if pat
-      if /\A=/ =~ opt.arg
+      if /^=/ =~ opt.arg
         opts.map! {|sw| sw + "="}
         if arg and CompletingHash === opt.pattern
           if opts = opt.pattern.candidate(arg, false, argpat)
@@ -1850,7 +1850,7 @@ _arguments -s -S \
   octal = "0(?:[0-7]+(?:_[0-7]+)*|#{binary}|#{hex})?"
   integer = "#{octal}|#{decimal}"
 
-  accept(Integer, %r"\A[-+]?(?:#{integer})\z"i) {|s,|
+  accept(Integer, %r"^[-+]?(?:#{integer})\z"i) {|s,|
     begin
       Integer(s)
     rescue ArgumentError
@@ -1862,7 +1862,7 @@ _arguments -s -S \
   # Float number format, and converts to Float.
   #
   float = "(?:#{decimal}(?:\\.(?:#{decimal})?)?|\\.#{decimal})(?:E[-+]?#{decimal})?"
-  floatpat = %r"\A[-+]?#{float}\z"i
+  floatpat = %r"^[-+]?#{float}\z"i
   accept(Float, floatpat) {|s,| s.to_f if s}
 
   #
@@ -1870,7 +1870,7 @@ _arguments -s -S \
   # for float format, and Rational for rational format.
   #
   real = "[-+]?(?:#{octal}|#{float})"
-  accept(Numeric, /\A(#{real})(?:\/(#{real}))?\z/i) {|s, d, n|
+  accept(Numeric, /^(#{real})(?:\/(#{real}))?\z/i) {|s, d, n|
     if n
       Rational(d, n)
     elsif s
@@ -1881,7 +1881,7 @@ _arguments -s -S \
   #
   # Decimal integer format, to be converted to Integer.
   #
-  DecimalInteger = /\A[-+]?#{decimal}\z/i
+  DecimalInteger = /^[-+]?#{decimal}\z/i
   accept(DecimalInteger, DecimalInteger) {|s,|
     begin
       Integer(s)
@@ -1894,7 +1894,7 @@ _arguments -s -S \
   # Ruby/C like octal/hexadecimal/binary integer format, to be converted to
   # Integer.
   #
-  OctalInteger = /\A[-+]?(?:[0-7]+(?:_[0-7]+)*|0(?:#{binary}|#{hex}))\z/i
+  OctalInteger = /^[-+]?(?:[0-7]+(?:_[0-7]+)*|0(?:#{binary}|#{hex}))\z/i
   accept(OctalInteger, OctalInteger) {|s,|
     begin
       Integer(s, 8)
@@ -1944,7 +1944,7 @@ _arguments -s -S \
   #
   # Regular expression with options.
   #
-  accept(Regexp, %r"\A/((?:\\.|[^\\])*)/([[:alpha:]]+)?\z|.*") do |all, s, o|
+  accept(Regexp, %r"^/((?:\\.|[^\\])*)/([[:alpha:]]+)?\z|.*") do |all, s, o|
     f = 0
     if o
       f |= Regexp::IGNORECASE if /i/ =~ o
@@ -1984,11 +1984,11 @@ _arguments -s -S \
     end
 
     def self.filter_backtrace(array)
-      unless $DEBUG
-        array.delete_if do |item|
-          %r"\A#{Regexp.quote(__FILE__)}:" =~ item
-        end
-      end
+      # unless $DEBUG
+      #   array.delete_if do |item|
+      #     %r"^#{Regexp.quote(__FILE__)}:" =~ item
+      #   end
+      # end
       array
     end
 
@@ -2169,4 +2169,3 @@ _arguments -s -S \
     const_set(:DecimalNumeric, OptionParser::DecimalNumeric)
   end
 end
-

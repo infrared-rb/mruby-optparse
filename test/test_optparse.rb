@@ -28,6 +28,14 @@ class TestOptparse < MTest::Unit::TestCase
       @configuration[:INTEGER] = integer
     end
 
+    @o.on "-X=VALUEX", String do |string|
+      @configuration[:X] = string
+    end
+
+    @o.on "-y=VALUEY", Integer do |integer|
+      @configuration[:Y] = integer
+    end
+
     @o.banner = "Usage: mruby #{__FILE__} [OPTIONS]"
   end
 
@@ -37,10 +45,22 @@ class TestOptparse < MTest::Unit::TestCase
     assert @configuration[:CLEANUP]
   end
 
-  def test_parse_argument_completion
-    @o.parse '--clean'
+  def test_parse_short
+    @o.parse '-X', 'foobar'
 
-    assert @configuration[:CLEANUP]
+    assert_equal @configuration[:X], 'foobar'
+  end
+
+  def test_parse_short_int
+    @o.parse '-y', '5471'
+
+    assert_equal @configuration[:Y], 5471
+  end
+
+  def test_parse_no_argument_completion
+    assert_raise OptionParser::InvalidOption do
+      @o.parse '--clean'
+    end
   end
 
   def test_parse_argument_conversion
@@ -62,9 +82,9 @@ class TestOptparse < MTest::Unit::TestCase
   end
 
   def test_parse_value_completion
-    @o.parse '--environment', 'prod'
-
-    assert_equal 'production', @configuration[:ENVIRONMENT]
+    assert_raise OptionParser::InvalidArgument do
+      @o.parse '--environment', 'prod'
+    end
   end
 
   def test_record_separator
@@ -78,10 +98,10 @@ class TestOptparse < MTest::Unit::TestCase
   def test_to_s
     help = @o.to_s
 
-    assert_match 'Usage: ',             help
-    assert_match '--environment',       help
-    assert_match 'Set the environment', help
-    assert_match '--[no-]cleanup',      help
+    assert %r'Usage: '.match(help)
+    assert %r'--environment'.match(help)
+    assert %r'Set the environment'.match(help)
+    assert %r'--\[no-\]cleanup'.match(help)
   end
 end
 

@@ -404,8 +404,8 @@ class OptionParser
   #
   module Completion
     def self.regexp(key, icase)
-      icase = nil if icase == false
-      Regexp.new('^' + Regexp.quote(key).gsub(/(\w+\b)/, '\1\w*'), icase)
+      icase_ = icase ? 'i' : ''
+      Regexp.new('^' + Regexp.quote(key).gsub(/(\w+\b)/, '\1\w*'), icase_)
     end
 
     def self.candidate(key, icase = false, pat = nil, &block)
@@ -1270,7 +1270,7 @@ _arguments -s -S \
   #
   # Returns option summary string.
   #
-  def help; summarize("#{banner}".sub(/\n?\z/, "\n")) end
+  def help; summarize("#{banner}".sub(/\n?$/, "\n")) end
   alias to_s help
 
   #
@@ -1406,7 +1406,7 @@ _arguments -s -S \
         raise ArgumentError, "unsupported argument type: #{o}", ParseError.filter_backtrace(caller(4))
       when *ArgumentStyle.keys
         style = notwice(ArgumentStyle[o], style, 'style')
-      when /^--no-([^\[\]=\s]*)(.+)?/
+      when /^--no-([-a-zA-Z0-9_]*)(.+)?/
         q, a = $1, $2
         o = notwice(a ? Object : TrueClass, klass, 'type')
         not_pattern, not_conv = search(:atype, o) unless not_style
@@ -1416,7 +1416,7 @@ _arguments -s -S \
         ldesc << "--no-#{q}"
         long << 'no-' + (q = q.downcase)
         nolong << q
-      when /^--\[no-\]([^\[\]=\s]*)(.+)?/
+      when /^--\[no-\]([-a-zA-Z0-9_]*)(.+)?/
         q, a = $1, $2
         o = notwice(a ? Object : TrueClass, klass, 'type')
         if a
@@ -1428,7 +1428,7 @@ _arguments -s -S \
         not_pattern, not_conv = search(:atype, FalseClass) unless not_style
         not_style = Switch::NoArgument
         nolong << 'no-' + o
-      when /^--([^\[\]=\s]*)(.+)?/
+      when /^--([-a-zA-Z0-9_]*)(.+)?/
         q, a = $1, $2
         if a
           o = notwice(NilClass, klass, 'type')
@@ -1437,15 +1437,15 @@ _arguments -s -S \
         end
         ldesc << "--#{q}"
         long << (o = q.downcase)
-      # when /^-(\[\^?\]?(?:[^\\\]]|\\.)*\])(.+)?/
-      #   q, a = $1, $2
-      #   o = notwice(Object, klass, 'type')
-      #   if a
-      #     default_style = default_style.guess(arg = a)
-      #     default_pattern, conv = search(:atype, o) unless default_pattern
-      #   end
-      #   sdesc << "-#{q}"
-      #   short << Regexp.new(q)
+      when /^-(\[\^?\]?([^\\\]]|\\.)*\])(.+)?/
+        q, a = $1, $2
+        o = notwice(Object, klass, 'type')
+        if a
+          default_style = default_style.guess(arg = a)
+          default_pattern, conv = search(:atype, o) unless default_pattern
+        end
+        sdesc << "-#{q}"
+        short << Regexp.new(q)
       when /^-(.)(.+)?/
         q, a = $1, $2
         if a
@@ -1844,13 +1844,13 @@ _arguments -s -S \
   # for 0x, and decimal for others; with optional sign prefix. Converts to
   # Integer.
   #
-  decimal = '\d+(?:_\d+)*'
-  binary = 'b[01]+(?:_[01]+)*'
-  hex = 'x[\da-f]+(?:_[\da-f]+)*'
-  octal = "0(?:[0-7]+(?:_[0-7]+)*|#{binary}|#{hex})?"
+  decimal = '[0-9]+(_[0-9]+)*'
+  binary = 'b[01]+(_[01]+)*'
+  hex = 'x[0-9a-f]+(_[0-9a-f]+)*'
+  octal = "0([0-7]+(_[0-7]+)*|#{binary}|#{hex})?"
   integer = "#{octal}|#{decimal}"
 
-  accept(Integer, %r"^[-+]?(?:#{integer})\z"i) {|s,|
+  accept(Integer, %r"^[-+]?(#{integer})$"i) {|s,|
     begin
       Integer(s)
     rescue ArgumentError
@@ -1861,16 +1861,16 @@ _arguments -s -S \
   #
   # Float number format, and converts to Float.
   #
-  float = "(?:#{decimal}(?:\\.(?:#{decimal})?)?|\\.#{decimal})(?:E[-+]?#{decimal})?"
-  floatpat = %r"^[-+]?#{float}\z"i
+  float = "(#{decimal}(\\.(#{decimal})?)?|\\.#{decimal})(E[-+]?#{decimal})?"
+  floatpat = %r"^[-+]?#{float}$"i
   accept(Float, floatpat) {|s,| s.to_f if s}
 
   #
   # Generic numeric format, converts to Integer for integer format, Float
   # for float format, and Rational for rational format.
   #
-  real = "[-+]?(?:#{octal}|#{float})"
-  accept(Numeric, /^(#{real})(?:\/(#{real}))?\z/i) {|s, d, n|
+  real = "[-+]?(#{octal}|#{float})"
+  accept(Numeric, /^(#{real})(\/(#{real}))?$/i) {|s, d, n|
     if n
       Rational(d, n)
     elsif s
@@ -1881,7 +1881,7 @@ _arguments -s -S \
   #
   # Decimal integer format, to be converted to Integer.
   #
-  DecimalInteger = /^[-+]?#{decimal}\z/i
+  DecimalInteger = /^[-+]?#{decimal}$/i
   accept(DecimalInteger, DecimalInteger) {|s,|
     begin
       Integer(s)
@@ -1894,7 +1894,7 @@ _arguments -s -S \
   # Ruby/C like octal/hexadecimal/binary integer format, to be converted to
   # Integer.
   #
-  OctalInteger = /^[-+]?(?:[0-7]+(?:_[0-7]+)*|0(?:#{binary}|#{hex}))\z/i
+  OctalInteger = /^[-+]?([0-7]+(_[0-7]+)*|0(#{binary}|#{hex}))$/i
   accept(OctalInteger, OctalInteger) {|s,|
     begin
       Integer(s, 8)
@@ -1944,7 +1944,7 @@ _arguments -s -S \
   #
   # Regular expression with options.
   #
-  accept(Regexp, %r"^/((?:\\.|[^\\])*)/([[:alpha:]]+)?\z|.*") do |all, s, o|
+  accept(Regexp, %r"^/((\\.|[^\\])*)/([a-zA-Z0-9_]+)?$|.*") do |all, s, o|
     f = 0
     if o
       f |= Regexp::IGNORECASE if /i/ =~ o

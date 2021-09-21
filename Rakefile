@@ -55,6 +55,8 @@ MRuby::Build.new do |conf|
 
   conf.gem mgem: 'mtest'
   conf.gem #{local_gem.dump}
+
+  conf.enable_debug
 end
   BUILD_CONFIG
 

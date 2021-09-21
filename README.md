@@ -1,11 +1,11 @@
 # mruby-optparse
 
-This isthe forked version of `fastly/mruby-optparse`.
+This is the forked version of `fastly/mruby-optparse`.
 
-Differencesar:
+Differences are:
 
 * This optparse uses [posix (or GNU extended) regexp](https://github.com/udzura/mruby-posix-regexp) instead of onigmo dependency
-* For that, some of features of original optparse are unsupported
+* For that reason, some of features of original optparse are unsupported
 
 ---
 

@@ -1,5 +1,14 @@
 # mruby-optparse
 
+This isthe forked version of `fastly/mruby-optparse`.
+
+Differencesar:
+
+* This optparse uses [posix (or GNU extended) regexp](https://github.com/udzura/mruby-posix-regexp) instead of onigmo dependency
+* For that, some of features of original optparse are unsupported
+
+---
+
 This is a port of OptionParser from CRuby.
 
 See [the CRuby OptionParser

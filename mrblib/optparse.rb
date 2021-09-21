@@ -1437,8 +1437,8 @@ _arguments -s -S \
         end
         ldesc << "--#{q}"
         long << (o = q.downcase)
-      when /^-(\[\^?\]?([^\\\]]|\\.)*\])(.+)?/
-        q, a = $1, $2
+      when /^-(\[\^?\]?([a-zA-Z0-9])*\])(.+)?/
+        q, a = $1, $3
         o = notwice(Object, klass, 'type')
         if a
           default_style = default_style.guess(arg = a)

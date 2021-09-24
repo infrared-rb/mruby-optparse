@@ -58,7 +58,7 @@ class TestOptparse < MTest::Unit::TestCase
   end
 
   def test_parse_no_argument_completion
-    assert_raise OptionParser::InvalidOption do
+    assert_raise OptionParser::AmbiguousOption do
       @o.parse '--clean'
     end
   end
@@ -82,7 +82,7 @@ class TestOptparse < MTest::Unit::TestCase
   end
 
   def test_parse_value_completion
-    assert_raise OptionParser::InvalidArgument do
+    assert_raise OptionParser::AmbiguousArgument do
       @o.parse '--environment', 'prod'
     end
   end

@@ -1172,7 +1172,7 @@ _arguments -s -S \
   # to $0.
   #
   def program_name
-    @program_name || File.basename($0, '.*')
+    @program_name || File.basename($0)
   end
 
   # for experimental cascading :-)
